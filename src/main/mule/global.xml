@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+	<global-property doc:name="Global Property" doc:id="7f336289-143c-4f07-891f-829adef66c75" name="env" value="local" />
+	<configuration-properties doc:name="Configuration properties" doc:id="f77c1c94-a0b3-43fd-8ea5-64f8e2455693" file="s-gfk-${env}.yaml" />
+	<http:request-config name="HTTP_Request_config_Gfk" doc:name="HTTP_Request_config_Shopify" doc:id="1011a8cc-47b7-4d4e-a6c5-99eddef70434" >
+		<http:request-connection host="${gfk.host}" port="${gfk.port}">
+			<reconnection >
+				<reconnect frequency="5000" count="3" />
+			</reconnection>
+			<http:authentication >
+				<http:basic-authentication username="${gfk.user}" password="${gfk.pass}" />
+			</http:authentication>
+		
+</http:request-connection>
+	</http:request-config>
+	<http:request-config name="HTTP_Request_configuration_s-salesforce" doc:name="HTTP Request configuration" doc:id="89d74feb-d739-4152-b771-0bd8c39f27d2" responseTimeout="${timeout.response}">
+		<http:request-connection host="${s-salesforce.host}" port="${s-salesforce.port}" connectionIdleTimeout="${timeout.idle}">
+			<reconnection >
+				<reconnect frequency="5000" count="3" />
+			</reconnection>
+		</http:request-connection>
+	</http:request-config>
+</mule>

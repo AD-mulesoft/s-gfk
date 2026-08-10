@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<flow name="Leads-File_Flow" doc:id="4941a5a0-b3d0-4f21-96dd-8684d8ea3aea" maxConcurrency="1">
+		<scheduler doc:name="Scheduler" doc:id="d757bfa0-71e6-4c13-82b9-f438c4de9b05" >
+			<scheduling-strategy >
+				<cron timeZone="America/Santiago" expression="0 0 9 ? * * *"/>
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="INIT" doc:id="d90a2249-1f8d-42a3-9f8d-d230bbdf8e6c" message="INIT"/>
+		<ee:transform doc:name="Init vars" doc:id="d51d208a-5251-4bae-bd27-44e993818ea1" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="gfkPath" ><![CDATA[%dw 2.0
+output application/json
+---
+p('gfk.basePath') ++ p('gfk.leadFile.path') ++ (((now() as Date) - |P1D|) as String { format: "yyyyMMdd" }) ++ ".csv"]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="1af47c93-b68c-48ed-92e4-8fd8b7c1490b" message='#["Get GFK file: " ++ vars.gfkPath]'/>
+		<http:request doc:name="GFK /get Leads" doc:id="843875bb-8a06-4975-a164-069b23538404" config-ref="HTTP_Request_config_Gfk" path="#[vars.gfkPath]"/>
+		<logger level="INFO" doc:name="payload" doc:id="e21c066b-2d81-4a6d-a343-69b0da4cbecc" message="#[payload]"/>
+		<ee:transform doc:name="Format Lead Req" doc:id="46901132-3c0e-4593-a1e8-834d256b8464" >
+			<ee:message >
+				<ee:set-payload resource="salesforce/lead.dwl" />
+			</ee:message>
+		</ee:transform>
+		<http:request doc:name="s-salesforce /lead" doc:id="7af746b4-612d-4209-aa30-1d1f0e4ee7d0" config-ref="HTTP_Request_configuration_s-salesforce" method="POST" path="${s-salesforce.basePath}${s-salesforce.lead.path}" />
+		<logger level="INFO" doc:name="END" doc:id="353dc411-b5f2-4c32-a421-f9f21006c03f" message="END"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="cfab1f69-dba0-4035-a471-746101c711f1" type="HTTP:NOT_FOUND">
+				<logger level="INFO" doc:name="Logger" doc:id="4701ffd5-b79e-4e90-b601-0d3c6c01b06b" message="#[%dw 2.0&#10;output application/json&#10;---&#10;error.errorMessage.payload]" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<!-- [STUDIO:"Leads-FileList_Flow"]<flow name="Leads-FileList_Flow" doc:id="71acbe3f-6d47-4c91-9afc-1ef4bd57b6f9" maxConcurrency="1" >
+		<scheduler doc:name="Scheduler" doc:id="e2cfaa32-2a20-4029-96e9-205a7fb016c4" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="1" startDelay="1" timeUnit="DAYS" />
+			</scheduling-strategy>
+		</scheduler>
+		<ee:transform doc:name="Init vars" doc:id="13fa2537-2b45-41f7-8e7c-f84f90af3250" >
+			<ee:message />
+			<ee:variables >
+				<ee:set-variable variableName="gfkPath" ><![CDATA[%dw 2.0
+output application/json
+&#45;&#45;-
+p('gfk.leadFileList.path')&#93;&#93;></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<http:request doc:name="Request" doc:id="7cde10d0-a072-4c90-8007-d5fd8cf886a9" config-ref="HTTP_Request_config_Gfk" path="#[vars.gfkPath&#93;" />
+		<logger level="INFO" doc:name="payload" doc:id="6c8ef694-8564-4613-b6c9-afb2f23b5e91" message="#[payload&#93;" />
+	</flow> [STUDIO] -->
+</mule>
