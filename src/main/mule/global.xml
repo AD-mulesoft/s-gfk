@@ -18,8 +18,8 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 		
 </http:request-connection>
 	</http:request-config>
-	<http:request-config name="HTTP_Request_configuration_s-salesforce" doc:name="HTTP Request configuration" doc:id="89d74feb-d739-4152-b771-0bd8c39f27d2" responseTimeout="${timeout.response}">
-		<http:request-connection host="${s-salesforce.host}" port="${s-salesforce.port}" connectionIdleTimeout="${timeout.idle}">
+	<http:request-config name="HTTP_Request_configuration_s-salesforce" doc:name="HTTP Request configuration" doc:id="89d74feb-d739-4152-b771-0bd8c39f27d2" responseTimeout="${timeout.response}" requestStreamingMode="ALWAYS">
+		<http:request-connection host="${s-salesforce.host}" port="${s-salesforce.port}" connectionIdleTimeout="${timeout.idle}" usePersistentConnections="false">
 			<reconnection >
 				<reconnect frequency="5000" count="3" />
 			</reconnection>

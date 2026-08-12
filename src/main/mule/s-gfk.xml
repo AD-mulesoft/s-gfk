@@ -30,11 +30,26 @@ p('gfk.basePath') ++ p('gfk.leadFile.path') ++ (((now() as Date) - |P1D|) as Str
 				<ee:set-payload resource="salesforce/lead.dwl" />
 			</ee:message>
 		</ee:transform>
+		<ee:transform doc:name="Add source" doc:id="28bcfeda-f785-4af7-bfea-adba3481e827">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"source": "GFK",
+	"data": payload[0 to (p('leadGFKrecords'))]
+//	"data": payload
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables />
+		</ee:transform>
+		<logger level="INFO" doc:name="sizeOf" doc:id="0ba923f6-6917-4d62-916f-62b33c13df50" message='#["Sending to SF: " ++ sizeOf(payload.data)]' />
+		<logger level="INFO" doc:name="sizeOf" doc:id="e7aee67e-1049-40bc-9865-2103d70228b6" message="#[&quot;Payload bytes= &quot; ++ sizeOf(write(payload, 'application/json'))]"/>
 		<http:request doc:name="s-salesforce /lead" doc:id="7af746b4-612d-4209-aa30-1d1f0e4ee7d0" config-ref="HTTP_Request_configuration_s-salesforce" method="POST" path="${s-salesforce.basePath}${s-salesforce.lead.path}" />
 		<logger level="INFO" doc:name="END" doc:id="353dc411-b5f2-4c32-a421-f9f21006c03f" message="END"/>
 		<error-handler >
-			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="cfab1f69-dba0-4035-a471-746101c711f1" type="HTTP:NOT_FOUND">
-				<logger level="INFO" doc:name="Logger" doc:id="4701ffd5-b79e-4e90-b601-0d3c6c01b06b" message="#[%dw 2.0&#10;output application/json&#10;---&#10;error.errorMessage.payload]" />
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="cfab1f69-dba0-4035-a471-746101c711f1" type="HTTP:NOT_FOUND,HTTP:CONNECTIVITY">
+				<logger level="INFO" doc:name="Logger" doc:id="4701ffd5-b79e-4e90-b601-0d3c6c01b06b" message="#[error]" />
 			</on-error-propagate>
 		</error-handler>
 	</flow>
