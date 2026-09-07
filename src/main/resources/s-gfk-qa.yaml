@@ -8,7 +8,7 @@ timeout:
   idle: "300000"
 
 s-salesforce:
-  protocol: "HTTP"
+  protocol: "HTTPS"
   host: "s-salesforce-qa-8bfq3o.internal-5qufiz.usa-e2.cloudhub.io"
   port: ""
   basePath: "/api"
