@@ -12,40 +12,69 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 			</scheduling-strategy>
 		</scheduler>
 		<logger level="INFO" doc:name="INIT" doc:id="d90a2249-1f8d-42a3-9f8d-d230bbdf8e6c" message="INIT"/>
-		<ee:transform doc:name="Init vars" doc:id="d51d208a-5251-4bae-bd27-44e993818ea1" >
+		<ee:transform doc:name="gfkPath" doc:id="e2f2e472-41b9-4b10-b40a-7cbc57551d2b">
+			<ee:message />
+			<ee:variables>
+				<ee:set-variable variableName="gfkPath"><![CDATA[%dw 2.0
+output application/json
+---
+p('gfk.leadFileList.path')]]></ee:set-variable>
+				<ee:set-variable variableName="gfkFileDate" ><![CDATA[%dw 2.0
+output application/json
+---
+if(!isEmpty(p('leadGFKFileDate')))
+(p('leadGFKFileDate'))
+else
+(((now() as Date) - |P1D|) as String { format: "yyyyMMdd" })]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<until-successful maxRetries="3" doc:name="Until Successful" doc:id="ad9339f7-464f-416f-8588-2d50ebbefbe0" millisBetweenRetries="5000">
+			<http:request doc:name="GFK /GET File List" doc:id="7cef8b18-2e5b-455c-aa21-8f1a0b3b370a" config-ref="HTTP_Request_config_Gfk" path="#[vars.gfkPath]" />
+		</until-successful>
+		<logger level="INFO" doc:name="payload" doc:id="6dd73960-dbb0-4ad7-8f02-2c8a7a4640ca" message="#[payload]" />
+		<logger level="INFO" doc:name="gfkFileDate" doc:id="75586abc-e6e1-4a0e-afff-c5ea4e4d8b5b" message='#["Look for file date: " ++ vars.gfkFileDate]' />
+		<ee:transform doc:name="gfkPath" doc:id="d51d208a-5251-4bae-bd27-44e993818ea1" >
 			<ee:message >
 			</ee:message>
 			<ee:variables >
 				<ee:set-variable variableName="gfkPath" ><![CDATA[%dw 2.0
 output application/json
 ---
-p('gfk.basePath') ++ p('gfk.leadFile.path') ++ (((now() as Date) - |P1D|) as String { format: "yyyyMMdd" }) ++ ".csv"]]></ee:set-variable>
+(p('gfk.basePath') ++ "/" ++ (payload filter (item) -> (item.file contains vars.gfkFileDate))[0].file default "NO_FILE")]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-		<logger level="INFO" doc:name="Logger" doc:id="1af47c93-b68c-48ed-92e4-8fd8b7c1490b" message='#["Get GFK file: " ++ vars.gfkPath]'/>
-		<http:request doc:name="GFK /get Leads" doc:id="843875bb-8a06-4975-a164-069b23538404" config-ref="HTTP_Request_config_Gfk" path="#[vars.gfkPath]"/>
-		<logger level="INFO" doc:name="payload" doc:id="e21c066b-2d81-4a6d-a343-69b0da4cbecc" message="#[payload]"/>
-		<ee:transform doc:name="Format Lead Req" doc:id="46901132-3c0e-4593-a1e8-834d256b8464" >
-			<ee:message >
+		<choice doc:name="Choice" doc:id="6e793152-0c42-43f2-9707-78a2f08e5614" >
+			<when expression='#[vars.gfkPath != "NO_FILE"]'>
+				<logger level="INFO" doc:name="gfkPath" doc:id="1af47c93-b68c-48ed-92e4-8fd8b7c1490b" message='#["Get GFK file: " ++ vars.gfkPath]' />
+				<until-successful maxRetries="3" doc:name="Until Successful" doc:id="a2e02e6e-ac19-40e3-894c-6eed3b05b78c" millisBetweenRetries="5000">
+			<http:request doc:name="GFK /GET File" doc:id="843875bb-8a06-4975-a164-069b23538404" config-ref="HTTP_Request_config_Gfk" path="#[vars.gfkPath]" />
+		</until-successful>
+				<logger level="INFO" doc:name="payload" doc:id="e21c066b-2d81-4a6d-a343-69b0da4cbecc" message="#[payload]" />
+				<ee:transform doc:name="Format Lead Req" doc:id="46901132-3c0e-4593-a1e8-834d256b8464">
+			<ee:message>
 				<ee:set-payload resource="salesforce/lead.dwl" />
 			</ee:message>
 		</ee:transform>
-		<ee:transform doc:name="Add source" doc:id="28bcfeda-f785-4af7-bfea-adba3481e827">
+				<ee:transform doc:name="Add source" doc:id="28bcfeda-f785-4af7-bfea-adba3481e827">
 			<ee:message>
 				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 {
 	"source": "GFK",
-	"data": payload[0 to (p('leadGFKrecords'))]
-//	"data": payload
+	"data": if(!isEmpty(p('leadGFKrecords'))) payload[0 to (p('leadGFKrecords'))] else payload
 }]]></ee:set-payload>
 			</ee:message>
 			<ee:variables />
 		</ee:transform>
-		<logger level="INFO" doc:name="sizeOf" doc:id="0ba923f6-6917-4d62-916f-62b33c13df50" message='#["Sending to SF: " ++ sizeOf(payload.data)]' />
-		<logger level="INFO" doc:name="sizeOf" doc:id="e7aee67e-1049-40bc-9865-2103d70228b6" message="#[&quot;Payload bytes= &quot; ++ sizeOf(write(payload, 'application/json'))]"/>
-		<http:request doc:name="s-salesforce /lead" doc:id="7af746b4-612d-4209-aa30-1d1f0e4ee7d0" config-ref="HTTP_Request_configuration_s-salesforce" method="POST" path="${s-salesforce.basePath}${s-salesforce.lead.path}" />
+				<logger level="INFO" doc:name="sizeOf" doc:id="0ba923f6-6917-4d62-916f-62b33c13df50" message='#["Sending to SF: " ++ sizeOf(payload.data)]' />
+				<logger level="INFO" doc:name="sizeOf" doc:id="e7aee67e-1049-40bc-9865-2103d70228b6" message="#[&quot;Payload bytes= &quot; ++ sizeOf(write(payload, 'application/json'))]" />
+				<http:request doc:name="s-salesforce /lead" doc:id="7af746b4-612d-4209-aa30-1d1f0e4ee7d0" config-ref="HTTP_Request_configuration_s-salesforce" method="POST" path="${s-salesforce.basePath}${s-salesforce.lead.path}" />
+			</when>
+			<otherwise >
+				<logger level="INFO" doc:name="NO_FILE" doc:id="a415375a-573e-45db-ae9d-38903cf0ef0a" message='No file found' />
+			</otherwise>
+		</choice>
 		<logger level="INFO" doc:name="END" doc:id="353dc411-b5f2-4c32-a421-f9f21006c03f" message="END"/>
 		<error-handler >
 			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="cfab1f69-dba0-4035-a471-746101c711f1" type="HTTP:NOT_FOUND,HTTP:CONNECTIVITY">
@@ -59,10 +88,10 @@ output application/json
 				<fixed-frequency frequency="1" startDelay="1" timeUnit="DAYS" />
 			</scheduling-strategy>
 		</scheduler>
-		<ee:transform doc:name="Init vars" doc:id="13fa2537-2b45-41f7-8e7c-f84f90af3250" >
+		<ee:transform doc:name="Init vars" doc:id="13fa2537-2b45-41f7-8e7c-f84f90af3250">
 			<ee:message />
-			<ee:variables >
-				<ee:set-variable variableName="gfkPath" ><![CDATA[%dw 2.0
+			<ee:variables>
+				<ee:set-variable variableName="gfkPath"><![CDATA[%dw 2.0
 output application/json
 &#45;&#45;-
 p('gfk.leadFileList.path')&#93;&#93;></ee:set-variable>

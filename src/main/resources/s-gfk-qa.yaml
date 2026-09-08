@@ -25,3 +25,6 @@ gfk:
     path: "/ioc_chile_"
   leadFileList:
     path: "/gfk_volcan_files"
+
+leadGFKrecords: ""
+leadGFKFileDate: ""
